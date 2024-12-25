@@ -67,7 +67,7 @@ func main() {
 }
 
 var commonHelp = `
-    --pid Generate pid file in current working directory
+    --pid, Optional path to generate pid file
 
     -v, Enable verbose logging
 
@@ -86,9 +86,9 @@ var commonHelp = `
 
 `
 
-func generatePidFile() {
+func generatePidFile(pidfile *string) {
 	pid := []byte(strconv.Itoa(os.Getpid()))
-	if err := os.WriteFile("chisel.pid", pid, 0644); err != nil {
+	if err := os.WriteFile(*pidfile, pid, 0644); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -171,9 +171,9 @@ var serverHelp = `
     provide a certificate notification email by setting CHISEL_LE_EMAIL.
 
     --tls-ca, a path to a PEM encoded CA certificate bundle or a directory
-    holding multiple PEM encode CA certificate bundle files, which is used to 
-    validate client connections. The provided CA certificates will be used 
-    instead of the system roots. This is commonly used to implement mutual-TLS. 
+    holding multiple PEM encode CA certificate bundle files, which is used to
+    validate client connections. The provided CA certificates will be used
+    instead of the system roots. This is commonly used to implement mutual-TLS.
 ` + commonHelp
 
 func server(args []string) {
@@ -198,7 +198,7 @@ func server(args []string) {
 	host := flags.String("host", "", "")
 	p := flags.String("p", "", "")
 	port := flags.String("port", "", "")
-	pid := flags.Bool("pid", false, "")
+	pid := flags.String("pid", "", "")
 	verbose := flags.Bool("v", false, "")
 	keyGen := flags.String("keygen", "", "")
 
@@ -248,8 +248,8 @@ func server(args []string) {
 		log.Fatal(err)
 	}
 	s.Debug = *verbose
-	if *pid {
-		generatePidFile()
+	if *pid != "" {
+		generatePidFile(pid)
 	}
 	go cos.GoStats()
 	ctx := cos.InterruptContext()
@@ -353,7 +353,7 @@ var clientHelp = `
     client's internal SOCKS5 proxy.
 
     When stdio is used as local-host, the tunnel will connect standard
-    input/output of this program with the remote. This is useful when 
+    input/output of this program with the remote. This is useful when
     combined with ssh ProxyCommand. You can use
       ssh -o ProxyCommand='chisel client chiselserver stdio:%h:%p' \
           user@example.com
@@ -397,7 +397,7 @@ var clientHelp = `
     --hostname, Optionally set the 'Host' header (defaults to the host
     found in the server url).
 
-    --sni, Override the ServerName when using TLS (defaults to the 
+    --sni, Override the ServerName when using TLS (defaults to the
     hostname).
 
     --tls-ca, An optional root certificate bundle used to verify the
@@ -412,11 +412,11 @@ var clientHelp = `
     may be still verified (see --fingerprint) after inner connection
     is established.
 
-    --tls-key, a path to a PEM encoded private key used for client 
+    --tls-key, a path to a PEM encoded private key used for client
     authentication (mutual-TLS).
 
-    --tls-cert, a path to a PEM encoded certificate matching the provided 
-    private key. The certificate must have client authentication 
+    --tls-cert, a path to a PEM encoded certificate matching the provided
+    private key. The certificate must have client authentication
     enabled (mutual-TLS).
 ` + commonHelp
 
@@ -437,7 +437,7 @@ func client(args []string) {
 	flags.BoolVar(&config.Verbose, "v", false, "")
 	hostname := flags.String("hostname", "", "")
 	sni := flags.String("sni", "", "")
-	pid := flags.Bool("pid", false, "")
+	pid := flags.String("pid", "", "")
 	flags.Usage = func() {
 		fmt.Print(clientHelp)
 		os.Exit(0)
@@ -469,8 +469,8 @@ func client(args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *pid {
-		generatePidFile()
+	if *pid != "" {
+		generatePidFile(pid)
 	}
 	go cos.GoStats()
 	ctx := cos.InterruptContext()
