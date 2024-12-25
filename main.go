@@ -67,7 +67,7 @@ func main() {
 }
 
 var commonHelp = `
-    --pid, Optional path to generate pid file
+    --pid, Optional path to generate pid file. Defaults to STDOUT
 
     -v, Enable verbose logging
 
@@ -88,8 +88,12 @@ var commonHelp = `
 
 func generatePidFile(pidfile *string) {
 	pid := []byte(strconv.Itoa(os.Getpid()))
-	if err := os.WriteFile(*pidfile, pid, 0644); err != nil {
-		log.Fatal(err)
+	if *pidfile == "STDOUT" {
+		fmt.Printf("PID: %s\n", pid);
+	} else {
+		if err := os.WriteFile(*pidfile, pid, 0644); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
@@ -198,7 +202,7 @@ func server(args []string) {
 	host := flags.String("host", "", "")
 	p := flags.String("p", "", "")
 	port := flags.String("port", "", "")
-	pid := flags.String("pid", "", "")
+	pid := flags.String("pid", "", "STDOUT")
 	verbose := flags.Bool("v", false, "")
 	keyGen := flags.String("keygen", "", "")
 
@@ -437,7 +441,7 @@ func client(args []string) {
 	flags.BoolVar(&config.Verbose, "v", false, "")
 	hostname := flags.String("hostname", "", "")
 	sni := flags.String("sni", "", "")
-	pid := flags.String("pid", "", "")
+	pid := flags.String("pid", "", "STDOUT")
 	flags.Usage = func() {
 		fmt.Print(clientHelp)
 		os.Exit(0)
