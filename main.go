@@ -1,6 +1,7 @@
 package main
 
 import (
+	"C"
 	"flag"
 	"fmt"
 	"log"
@@ -484,4 +485,16 @@ func client(args []string) {
 	if err := c.Wait(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+//export C_client
+func C_client(c_argv []*C.char, c_argc C.int) {
+	argc := int(c_argc)
+	argv := make([]string, argc)
+
+	for i := 0; i < argc; i++ {
+		argv[i] = C.GoString(c_argv[i])
+	}
+
+	client(argv)
 }
