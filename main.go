@@ -499,7 +499,7 @@ func C_client(c_argv []*C.char, c_argc C.int) {
 		argv[i] = C.GoString(c_argv[i])
 	}
 
-	client(argv)
+	go client(argv)
 }
 
 //export C_client_stop
