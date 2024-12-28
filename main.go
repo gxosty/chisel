@@ -491,7 +491,7 @@ func client(args []string) {
 }
 
 //export C_client
-func C_client(c_argv []*C.char, c_argc C.int) {
+func C_client(c_argv []*C.char, c_argc C.int, c_running *C.int) {
 	argc := int(c_argc)
 	argv := make([]string, argc)
 
@@ -500,6 +500,15 @@ func C_client(c_argv []*C.char, c_argc C.int) {
 	}
 
 	go client(argv)
+
+	for ; int(*c_running) == 1; {
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	if g_client != nil {
+		g_client.Close()
+		g_client = nil
+	}
 }
 
 //export C_client_stop
