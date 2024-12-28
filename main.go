@@ -34,6 +34,8 @@ var help = `
 
 `
 
+var g_client *chclient.Client = nil
+
 func main() {
 
 	version := flag.Bool("version", false, "")
@@ -477,6 +479,7 @@ func client(args []string) {
 	if *pid != "" {
 		generatePidFile(pid)
 	}
+	g_client = c
 	go cos.GoStats()
 	ctx := cos.InterruptContext()
 	if err := c.Start(ctx); err != nil {
@@ -497,4 +500,12 @@ func C_client(c_argv []*C.char, c_argc C.int) {
 	}
 
 	client(argv)
+}
+
+//export C_client_stop
+func C_client_stop() {
+	if g_client != nil {
+		g_client.Close()
+		g_client = nil
+	}
 }
