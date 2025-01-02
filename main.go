@@ -483,15 +483,17 @@ func client(args []string) {
 	go cos.GoStats()
 	ctx := cos.InterruptContext()
 	if err := c.Start(ctx); err != nil {
-		log.Fatal(err)
+		// log.Fatal(err)
 	}
 	if err := c.Wait(); err != nil {
-		log.Fatal(err)
+		// log.Fatal(err)
 	}
+
+	fmt.Println("go client end")
 }
 
 //export C_client
-func C_client(c_argv []*C.char, c_argc C.int, c_running *C.int) {
+func C_client(c_argv []*C.char, c_argc C.int) {
 	argc := int(c_argc)
 	argv := make([]string, argc)
 
@@ -499,22 +501,18 @@ func C_client(c_argv []*C.char, c_argc C.int, c_running *C.int) {
 		argv[i] = C.GoString(c_argv[i])
 	}
 
-	go client(argv)
+	client(argv)
 
-	for ; int(*c_running) == 1; {
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	if g_client != nil {
-		g_client.Close()
-		g_client = nil
-	}
+	fmt.Println("go C_client end")
 }
 
 //export C_client_stop
 func C_client_stop() {
 	if g_client != nil {
+		fmt.Println("g_client.Close()")
 		g_client.Close()
 		g_client = nil
+	} else {
+		fmt.Println("g_client == nil")
 	}
 }
