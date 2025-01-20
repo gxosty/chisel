@@ -2,6 +2,7 @@ package main
 
 import (
 	"C"
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -62,7 +63,7 @@ func main() {
 	case "server":
 		server(args)
 	case "client":
-		client(args)
+		client(args, false)
 	default:
 		fmt.Print(help)
 		os.Exit(0)
@@ -427,7 +428,7 @@ var clientHelp = `
     enabled (mutual-TLS).
 ` + commonHelp
 
-func client(args []string) {
+func client(args []string, isCCall bool) {
 	flags := flag.NewFlagSet("client", flag.ContinueOnError)
 	config := chclient.Config{Headers: http.Header{}}
 	flags.StringVar(&config.Fingerprint, "fingerprint", "", "")
@@ -480,16 +481,27 @@ func client(args []string) {
 		generatePidFile(pid)
 	}
 	g_client = c
-	go cos.GoStats()
-	ctx := cos.InterruptContext()
-	if err := c.Start(ctx); err != nil {
-		// log.Fatal(err)
-	}
-	if err := c.Wait(); err != nil {
-		// log.Fatal(err)
+
+	if !isCCall {
+		go cos.GoStats()
 	}
 
-	fmt.Println("go client end")
+	var ctx context.Context;
+
+	if !isCCall {
+		ctx = cos.InterruptContext()
+	} else {
+		ctx_, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		ctx = ctx_
+	}
+
+	if err := c.Start(ctx); err != nil && !isCCall {
+		log.Fatal(err)
+	}
+	if err := c.Wait(); err != nil && !isCCall {
+		log.Fatal(err)
+	}
 }
 
 //export C_client
@@ -501,18 +513,13 @@ func C_client(c_argv []*C.char, c_argc C.int) {
 		argv[i] = C.GoString(c_argv[i])
 	}
 
-	client(argv)
-
-	fmt.Println("go C_client end")
+	client(argv, true)
 }
 
 //export C_client_stop
 func C_client_stop() {
 	if g_client != nil {
-		fmt.Println("g_client.Close()")
 		g_client.Close()
 		g_client = nil
-	} else {
-		fmt.Println("g_client == nil")
 	}
 }
