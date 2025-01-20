@@ -19,6 +19,12 @@ type socksHandler struct {
 	udp          *socks5.SingleUDPPortAssociate
 }
 
+type socksHandlerNoUDP struct {
+	p   *Proxy
+	sl  *log.Logger
+	udp *socks5.NoUDPHandler
+}
+
 func newSocksHandler(p *Proxy, localUDPAddr *net.UDPAddr, sl *log.Logger) *socksHandler {
 	return &socksHandler{
 		p: p,
@@ -34,13 +40,21 @@ func (h *socksHandler) OnStartServe(ctxServer socks5.ContextGo, _ net.Listener) 
 	h.udp = socks5.MakeSingleUDPPortAssociate(h.udpLocalAddr, h, h.sl)
 	return h.udp.ListenAndServeUDPPort(ctxServer, "udp")
 }
+func (h *socksHandlerNoUDP) OnStartServe(ctxServer socks5.ContextGo, n net.Listener) error {
+	h.udp = &socks5.NoUDPHandler{}
+	return h.udp.OnStartServe(ctxServer, n)
+}
 
 func (h *socksHandler) ErrLog() socks5.ErrorLogger {
 	return h.sl
 }
 
-func (h *socksHandler) OnConnect(ctx context.Context, conn net.Conn, req *socks5.Request) error {
-	return h.p.pipeRemote(ctx, conn, req.DestAddr.Address()+"/sot", func(dst ssh.Channel) error {
+func (h *socksHandlerNoUDP) ErrLog() socks5.ErrorLogger {
+	return h.sl
+}
+
+func OnConnectProxy(p *Proxy, ctx context.Context, conn net.Conn, req *socks5.Request) error {
+	return p.pipeRemote(ctx, conn, req.DestAddr.Address()+"/sot", func(dst ssh.Channel) error {
 		code := []byte{0}
 		_, err := dst.Read(code)
 		if err != nil {
@@ -59,8 +73,20 @@ func (h *socksHandler) OnConnect(ctx context.Context, conn net.Conn, req *socks5
 	})
 }
 
+func (h *socksHandler) OnConnect(ctx context.Context, conn net.Conn, req *socks5.Request) error {
+	return OnConnectProxy(h.p, ctx, conn, req)
+}
+
+func (h *socksHandlerNoUDP) OnConnect(ctx context.Context, conn net.Conn, req *socks5.Request) error {
+	return OnConnectProxy(h.p, ctx, conn, req)
+}
+
 func (h *socksHandler) OnAssociate(_ context.Context, conn net.Conn, _ *socks5.Request) error {
 	return h.udp.OnAssociate(conn)
+}
+
+func (h *socksHandlerNoUDP) OnAssociate(ctx context.Context, conn net.Conn, req *socks5.Request) error {
+	return h.udp.OnAssociate(ctx, conn, req)
 }
 
 func (h *socksHandler) MaxUDPPacketSize() uint {
