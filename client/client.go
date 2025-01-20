@@ -146,7 +146,7 @@ func NewClient(c *Config) (*Client, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Failed to decode remote '%s': %s", s, err)
 		}
-		if r.Socks {
+		if r.Socks || r.SocksNoUdp {
 			hasSocks = true
 		}
 		if r.Reverse {

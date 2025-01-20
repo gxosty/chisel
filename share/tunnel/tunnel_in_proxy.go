@@ -75,6 +75,15 @@ func (p *Proxy) listen() error {
 				Handler: newSocksHandler(p, udpAddr, sl),
 			})
 		}
+		if p.remote.SocksNoUdp {
+			sl := log.New(ioutil.Discard, "", 0)
+			if p.Logger.Debug {
+				sl = log.New(os.Stdout, "[socks]", log.Ldate|log.Ltime)
+			}
+			p.socksServer, _ = socks5.New(&socks5.Config{
+				Handler: &socksHandlerNoUDP{p: p, sl: sl},
+			})
+		}
 		p.Infof("Listening")
 		p.tcp = l
 	} else if p.remote.LocalProto == "udp" {
@@ -95,7 +104,7 @@ func (p *Proxy) listen() error {
 func (p *Proxy) Run(ctx context.Context) error {
 	if p.remote.Stdio {
 		return p.runStdio(ctx)
-	} else if p.remote.Socks {
+	} else if p.remote.Socks || p.remote.SocksNoUdp {
 		return p.socksServer.Serve(ctx, p.tcp)
 	} else if p.remote.LocalProto == "tcp" {
 		return p.runTCP(ctx)
