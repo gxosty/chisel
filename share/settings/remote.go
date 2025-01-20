@@ -35,7 +35,7 @@ import (
 type Remote struct {
 	LocalHost, LocalPort, LocalProto    string
 	RemoteHost, RemotePort, RemoteProto string
-	Socks, Reverse, Stdio               bool
+	Socks, SocksNoUdp, Reverse, Stdio   bool
 }
 
 const revPrefix = "R:"
@@ -57,9 +57,14 @@ func DecodeRemote(s string) (*Remote, error) {
 	for i := len(parts) - 1; i >= 0; i-- {
 		p := parts[i][1]
 		//remote portion is socks?
-		if i == len(parts)-1 && p == "socks" {
-			r.Socks = true
-			continue
+		if i == len(parts)-1 && strings.HasPrefix(p, "socks") {
+			if p == "socks" {
+				r.Socks = true
+				continue
+			} else if p == "socks-noudp" {
+				r.SocksNoUdp = true
+				continue
+			}
 		}
 		//local portion is stdio?
 		if i == 0 && p == "stdio" {
